@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人權教育學習單與教師管理雙平台</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js for radar & analytical visuals -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- html2canvas & jsPDF for exporting certificates/reports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Google Fonts Inter & Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        },
+                        indigoCustom: {
+                            50: '#eeeefb',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 50%, #f3e8ff 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+        }
+        .smooth-transition {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; padding: 0; }
+            .glass-card { box-shadow: none; border: none; background: transparent; }
+        }
+    </style>
+</head>
+<body class="py-6 px-3 sm:px-6 md:py-8">
+
+    <!-- Top Navigation Header with Mode Switcher -->
+    <div class="max-w-5xl mx-auto mb-6 no-print">
+        <div class="glass-card rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-md">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-black text-slate-800 tracking-tight">人權教育學習與管理雙平台</h1>
+                    <p class="text-xs text-slate-500">學生省思填寫與教師班級成效數據分析</p>
+                </div>
+            </div>
+
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button id="btn-mode-student" onclick="switchViewMode('student')" 
+                    class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all bg-white text-brand-700 shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-user-graduate"></i> 學生互動學習單
+                </button>
+                <button id="btn-mode-teacher" onclick="switchViewMode('teacher')" 
+                    class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-chalkboard-user"></i> 教師管理儀表板
+                    <span id="submission-count-badge" class="px-2 py-0.5 bg-brand-100 text-brand-800 text-xs rounded-full font-bold">3</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast-message" class="hidden fixed top-5 right-5 z-50 bg-slate-800 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-2">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-brand-500 text-lg"></i>
+        <span id="toast-text" class="text-sm font-medium">資訊已儲存</span>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="max-w-5xl mx-auto">
+
+        <!-- =================================================================== -->
+        <!-- STUDENT SECTION (學生前端互動學習單)                                -->
+        <!-- =================================================================== -->
+        <div id="student-view-container" class="space-y-6">
+            
+            <!-- Header Banner -->
+            <header class="glass-card rounded-3xl p-6 md:p-8 text-center relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none text-brand-700">
+                    <i class="fa-solid fa-scale-balanced text-9xl"></i>
+                </div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs sm:text-sm font-semibold mb-3">
+                    <i class="fa-solid fa-heart-pulse"></i> 深度自我覺察與共情省思
+                </div>
+                <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-800 tracking-tight mb-2">
+                    人權教育課程自我省思
+                </h1>
+                <p class="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+                    這不僅是一份學習紀錄，更是一場關於個人內在成長與尊重他人的自我對話。請用心聆聽自己的感受，記錄下這堂課帶給你的觸動與改變。
+                </p>
+
+                <!-- Step Indicators -->
+                <div class="no-print mt-8 flex items-center justify-between max-w-xl mx-auto relative">
+                    <div class="absolute top-1/2 left-0 right-0 h-1 bg-slate-200 -translate-y-1/2 z-0"></div>
+                    <div id="progress-bar-fill" class="absolute top-1/2 left-0 h-1 bg-brand-600 -translate-y-1/2 z-0 smooth-transition" style="width: 0%;"></div>
+
+                    <button onclick="goToStep(1)" id="step-dot-1" class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-brand-600 text-white shadow-md smooth-transition">1</button>
+                    <button onclick="goToStep(2)" id="step-dot-2" class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-slate-200 text-slate-600 smooth-transition">2</button>
+                    <button onclick="goToStep(3)" id="step-dot-3" class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-slate-200 text-slate-600 smooth-transition">3</button>
+                    <button onclick="goToStep(4)" id="step-dot-4" class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-slate-200 text-slate-600 smooth-transition">4</button>
+                </div>
+                <div class="no-print flex justify-between max-w-xl mx-auto text-xs text-slate-500 font-medium mt-2 px-1">
+                    <span>基本資料</span>
+                    <span>人權覺察評估</span>
+                    <span>感動與感悟</span>
+                    <span>省思報告生成</span>
+                </div>
+            </header>
+
+            <!-- FORM CONTAINER -->
+            <form id="reflection-form" onsubmit="return false;">
+                
+                <!-- SECTION 1: Personal Data -->
+                <div id="step-1" class="step-panel glass-card rounded-3xl p-6 sm:p-8 mb-6">
+                    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200/80">
+                        <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-id-card"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-800">第一部分：個人基本資料</h2>
+                            <p class="text-xs sm:text-sm text-slate-500">請填寫你的基本資訊，這將用於產出個人省思卡</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2" for="studentName">
+                                學生姓名 <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="studentName" required placeholder="例如：林小明"
+                                    class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all text-slate-800 text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2" for="schoolName">
+                                學校名稱 <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-school absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="schoolName" value="實驗國民小學" required placeholder="請輸入學校名稱"
+                                    class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all text-slate-800 text-sm">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2" for="grade">
+                                    年級 <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="text" id="grade" value="4" required placeholder="例如：4"
+                                    class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all text-slate-800 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2" for="classNum">
+                                    班級 <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="text" id="classNum" value="1班" required placeholder="例如：1班"
+                                    class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all text-slate-800 text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                性別 <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="gender-option cursor-pointer flex items-center justify-center p-3 rounded-xl border border-brand-500 bg-brand-50 text-brand-700 hover:bg-slate-50 transition-all text-sm font-medium">
+                                    <input type="radio" name="gender" value="男" class="sr-only" onchange="updateGenderStyle(this)" checked>
+                                    <i class="fa-solid fa-mars mr-2 text-blue-500"></i> 男
+                                </label>
+                                <label class="gender-option cursor-pointer flex items-center justify-center p-3 rounded-xl border border-slate-300 hover:bg-slate-50 transition-all text-sm font-medium text-slate-700">
+                                    <input type="radio" name="gender" value="女" class="sr-only" onchange="updateGenderStyle(this)">
+                                    <i class="fa-solid fa-venus mr-2 text-pink-500"></i> 女
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-end">
+                        <button type="button" onclick="nextStep(1)" class="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 flex items-center gap-2 transition-all">
+                            下一步：人權意識覺察 <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: Human Rights Awareness Self-Assessment -->
+                <div id="step-2" class="step-panel glass-card rounded-3xl p-6 sm:p-8 mb-6 hidden">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-200/80 flex-wrap gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-lg font-bold">
+                                <i class="fa-solid fa-sliders"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-800">第二部分：人權意識自我覺察（前後對比）</h2>
+                                <p class="text-xs sm:text-sm text-slate-500">評估項目：1 分為非常不同意，5 分為非常同意</p>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-medium">
+                            <i class="fa-solid fa-lightbulb"></i> 誠實填答反映個人內在成長
+                        </span>
+                    </div>
+
+                    <!-- Live Visual Radar Preview Trigger Card -->
+                    <div class="mb-8 p-4 bg-gradient-to-r from-teal-50 to-indigo-50 border border-teal-100 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-brand-600 text-xl font-bold">
+                                <i class="fa-solid fa-chart-radar"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-sm sm:text-base">即時成長圖譜數據監測</h4>
+                                <p class="text-xs text-slate-500">點選下方分數，即可同步調整你的成長對比數據</p>
+                            </div>
+                        </div>
+                        <div id="growth-badge" class="px-4 py-2 bg-white rounded-xl shadow-sm text-center">
+                            <span class="text-xs text-slate-400 block font-medium">綜合覺察增幅</span>
+                            <span id="growth-percent" class="text-lg font-black text-brand-600">+45.5%</span>
+                        </div>
+                    </div>
+
+                    <!-- Questions List -->
+                    <div class="space-y-8">
+
+                        <!-- Q1 -->
+                        <div class="p-5 rounded-2xl bg-white/70 border border-slate-200/60 shadow-sm hover:border-teal-300 transition-all">
+                            <div class="mb-3">
+                                <span class="inline-block px-2.5 py-0.5 rounded-md bg-teal-100 text-teal-800 text-xs font-bold mb-1">項目 1</span>
+                                <h3 class="text-base font-bold text-slate-800">尊嚴與平等的理解</h3>
+                                <p class="text-sm text-slate-600">我能理解每個人不論背景、性別或身分，都擁有相同的尊嚴與基本權利。</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-slate-50 p-4 rounded-xl">
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-slate-500"><i class="fa-solid fa-clock-rotate-left"></i> 上課前覺察</span>
+                                        <span class="text-xs font-bold text-brand-700" id="q1_before_val">3分</span>
+                                    </div>
+                                    <div class="flex justify-between gap-1" id="q1_before_group"></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-brand-600"><i class="fa-solid fa-sparkles"></i> 上課後覺察</span>
+                                        <span class="text-xs font-bold text-brand-700" id="q1_after_val">5分</span>
+                                    </div>
+                                    <div class="flex justify-between gap-1" id="q1_after_group"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Q2 -->
+                        <div class="p-5 rounded-2xl bg-white/70 border border-slate-200/60 shadow-sm hover:border-teal-300 transition-all">
+                            <div class="mb-3">
+                                <span class="inline-block px-2.5 py-0.5 rounded-md bg-teal-100 text-teal-800 text-xs font-bold mb-1">項目 2</span>
+                                <h3 class="text-base font-bold text-slate-800">偏見與微歧視的察覺</h3>
+                                <p class="text-sm text-slate-600">我能覺察日常生活中或自己無意間對他人產生的刻板印象或微小偏見。</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-slate-50 p-4 rounded-xl">
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-slate-500"><i class="fa-solid fa-clock-rotate-left"></i> 上課前覺察</span>
+                                        <span class="text-xs font-bold text-brand-700" id="q2_before_val">3分</span>
+                                    </div>
+                                    <div class="flex justify-between gap-1" id="q2_before_group"></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-brand-600"><i class="fa-solid fa-sparkles"></i> 上課後覺察</span>
+                                        <span class="text-xs font-bold text-brand-700" id="q2_after_val">5分</span>
+                                    </div>
+                                    <div class="flex justify-between gap-1" id="q2_after_group"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Q3 -->
+                        <div class="p-5 rounded-2xl bg-white/70 border border-slate-200/60 shadow-sm hover:border-teal-300 transition-all">
+                            <div class="mb-3">
+                                <span class="inline-block px-2.5 py-0.5 rounded-md bg-teal-100 text-teal-800 text-xs font-bold mb-1">項目 3</span>
+                                <h3 class="text-base font-bold text-slate-800">包容與同理心</h3>
+                                <p class="text-sm text-slate-600">當遇到與自己觀點不同、立場不同或文化背景不同的人時，我能試著「易地而處」理解對方。</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-slate-50 p-4 rounded-xl">
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-slate-500"><i class="fa-solid fa-clock-rotate-left"></i> 上課前覺察</span>
+                                        <span class="text-xs font-bold text-brand-700" id="q3_before_val">3分</span>
+                                    </div>
+                                    <div class="flex justify-between gap-1" id="q3_before_group"></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-brand-600"><i class="fa-solid fa-sparkles"></i> 上課後覺察</span>
+                                        <span class="text-xs font-bold text-brand-700" id="q3_after_val">5分</span>
+                                    </div>
+                                    <div class="flex justify-between gap-1" id="q3_after_group"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Q4 -->
+                        <div class="p-5 rounded-2xl bg-white/70 border border-slate-200/60 shadow-sm hover:border-teal-300 transition-all">
+                            <div class="mb-3">
+                                <span class="inline-block px-2.5 py-0.5 rounded-md bg-teal-100 text-teal-800 text-xs font-bold mb-1">項目 4</span>
+                                <h3 class="text-base font-bold text-slate-800">發聲與行動意願</h3>
+                                <p class="text-sm text-slate-600">當看到不公平的事或有人權受到侵害時，我願意在安全範圍內給予關懷或提出合理的關切。</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-slate-50 p-4 rounded-xl">
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-slate-500"><i class="fa-solid fa-clock-rotate-left"></i> 上課前覺察</span>
+                                        <span class="text-xs font-bold text-brand-700" id="q4_before_val">2分</span>
+                                    </div>
+                                    <div class="flex justify-between gap-1" id="q4_before_group"></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-brand-600"><i class="fa-solid fa-sparkles"></i> 上課後覺察</span>
+                                        <span class="text-xs font-bold text-brand-700" id="q4_after_val">4分</span>
+                                    </div>
+                                    <div class="flex justify-between gap-1" id="q4_after_group"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Navigation buttons -->
+                    <div class="mt-8 flex justify-between gap-4">
+                        <button type="button" onclick="goToStep(1)" class="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-all">
+                            <i class="fa-solid fa-arrow-left"></i> 上一步
+                        </button>
+                        <button type="button" onclick="nextStep(2)" class="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 flex items-center gap-2 transition-all">
+                            下一步：感動與感悟 <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: Deep Reflection Text Areas -->
+                <div id="step-3" class="step-panel glass-card rounded-3xl p-6 sm:p-8 mb-6 hidden">
+                    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200/80">
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-comment-dots"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-800">第三部分：課堂中的感動、覺察與共情</h2>
+                            <p class="text-xs sm:text-sm text-slate-500">自由敘述（可使用下方引導語靈感進行思考）</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-8">
+                        <!-- Text Question 1 -->
+                        <div class="space-y-3">
+                            <label class="block font-bold text-slate-800 text-base" for="text_touchpoint">
+                                1. 課堂最觸動／印象最深的瞬間（學習感動） <span class="text-rose-500">*</span>
+                            </label>
+                            <p class="text-xs text-slate-500">在這堂課的影片、故事、討論或活動中，哪一個畫面或哪一句話最讓你印象深刻或感到震撼？為什麼？</p>
+
+                            <!-- Prompt chips -->
+                            <div class="flex flex-wrap gap-2 pt-1">
+                                <span class="text-xs text-slate-400 font-medium self-center">快速靈感：</span>
+                                <button type="button" onclick="insertPrompt('text_touchpoint', '當看到影片中主角面對無助時，我感受到...')" class="text-xs bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-200 transition-all">
+                                    🎬 印象最深的影片畫面...
+                                </button>
+                                <button type="button" onclick="insertPrompt('text_touchpoint', '老師提到的那句話：「每個人都有被尊重的權利」，讓我想起...')" class="text-xs bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-200 transition-all">
+                                    💬 最被震撼的一句話...
+                                </button>
+                            </div>
+
+                            <textarea id="text_touchpoint" rows="4" required placeholder="請分享對你最具衝擊或溫暖的瞬間與原因..."
+                                class="w-full p-4 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all text-slate-800 text-sm leading-relaxed"></textarea>
+                        </div>
+
+                        <!-- Text Question 2 -->
+                        <div class="space-y-3">
+                            <label class="block font-bold text-slate-800 text-base" for="text_interaction">
+                                2. 師生與同儕互動的觀察與體會（課堂覺察） <span class="text-rose-500">*</span>
+                            </label>
+                            <p class="text-xs text-slate-500">在課堂討論或互動中，你有沒有注意到老師或同學對不同意見的包容與尊重？這給你帶來什麼感受？</p>
+
+                            <!-- Prompt chips -->
+                            <div class="flex flex-wrap gap-2 pt-1">
+                                <span class="text-xs text-slate-400 font-medium self-center">快速靈感：</span>
+                                <button type="button" onclick="insertPrompt('text_interaction', '當有同學提出比較特別的觀點時，大家都用心傾聽，我覺得...')" class="text-xs bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-200 transition-all">
+                                    👂 聆聽不同聲音的體會...
+                                </button>
+                                <button type="button" onclick="insertPrompt('text_interaction', '老師很有耐心地引導大家表達看法，讓我感覺這個班級很有安全感...')" class="text-xs bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-200 transition-all">
+                                    🤝 課堂包容氛圍的感受...
+                                </button>
+                            </div>
+
+                            <textarea id="text_interaction" rows="4" required placeholder="分享你在課堂交流中所看到的尊重、同理或值得學習的對話..."
+                                class="w-full p-4 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all text-slate-800 text-sm leading-relaxed"></textarea>
+                        </div>
+
+                        <!-- Text Question 3 -->
+                        <div class="space-y-3">
+                            <label class="block font-bold text-slate-800 text-base" for="text_action">
+                                3. 課後行動與改變（生活實踐） <span class="text-rose-500">*</span>
+                            </label>
+                            <p class="text-xs text-slate-500">上完這節課後，你在未來的課堂或日常生活中，想為自己或身邊的人做出什麼樣的改變？（例如：減少隨便開玩笑、多聆聽內向同學的發言、關注無障礙設施等）</p>
+
+                            <!-- Prompt chips -->
+                            <div class="flex flex-wrap gap-2 pt-1">
+                                <span class="text-xs text-slate-400 font-medium self-center">微小行動範例：</span>
+                                <button type="button" onclick="insertPrompt('text_action', '我會更加注意說話的用語，減少隨意拿他人的特徵開玩笑。')" class="text-xs bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-200 transition-all">
+                                    🚫 減少無意間的微歧視玩笑
+                                </button>
+                                <button type="button" onclick="insertPrompt('text_action', '分組討論時，我會主動邀請比較安靜的同學發表想法，並予以支持。')" class="text-xs bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-200 transition-all">
+                                    💙 給予內向夥伴更多聲援
+                                </button>
+                                <button type="button" onclick="insertPrompt('text_action', '我會在校園裡多觀察無障礙空間與設施，關心有特殊需求的朋友。')" class="text-xs bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-200 transition-all">
+                                    ♿ 關注環境包容性設施
+                                </button>
+                            </div>
+
+                            <textarea id="text_action" rows="4" required placeholder="寫下一個具體且你在生活中做得到的微小改變..."
+                                class="w-full p-4 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all text-slate-800 text-sm leading-relaxed"></textarea>
+                        </div>
+
+                    </div>
+
+                    <!-- Navigation buttons -->
+                    <div class="mt-8 flex justify-between gap-4">
+                        <button type="button" onclick="goToStep(2)" class="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-all">
+                            <i class="fa-solid fa-arrow-left"></i> 上一步
+                        </button>
+                        <button type="button" onclick="generateReport()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-award"></i> 完成並生成個人省思報告
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SECTION 4: Reflection Summary Certificate & Report -->
+                <div id="step-4" class="step-panel glass-card rounded-3xl p-6 sm:p-8 mb-6 hidden">
+                    <div class="no-print flex flex-wrap items-center justify-between pb-4 mb-6 border-b border-slate-200 gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg font-bold">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-800">省思報告已完成！</h2>
+                                <p class="text-xs sm:text-sm text-slate-500">你已順利完成人權教育學習自我審視與對話</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="downloadCertificateAsImage()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs sm:text-sm shadow-md flex items-center gap-1.5 transition-all">
+                                <i class="fa-solid fa-download"></i> 下載省思圖卡 (PNG)
+                            </button>
+                            <button type="button" onclick="window.print()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs sm:text-sm shadow-md flex items-center gap-1.5 transition-all">
+                                <i class="fa-solid fa-print"></i> 列印 / 存為PDF
+                            </button>
+                            <button type="button" onclick="copyReportText()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium text-xs sm:text-sm shadow-md flex items-center gap-1.5 transition-all">
+                                <i class="fa-solid fa-copy"></i> 複製文字內容
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CERTIFICATE DISPLAY AREA -->
+                    <div id="printable-certificate" class="bg-white rounded-2xl p-6 sm:p-10 border-2 border-brand-500/20 shadow-inner relative overflow-hidden">
+                        
+                        <!-- Decorative Badge Background -->
+                        <div class="absolute -right-12 -top-12 w-40 h-40 bg-brand-50 rounded-full flex items-end justify-start p-8 opacity-50 pointer-events-none">
+                            <i class="fa-solid fa-award text-6xl text-brand-600"></i>
+                        </div>
+
+                        <!-- Header inside card -->
+                        <div class="border-b-2 border-slate-100 pb-6 mb-6">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="text-xs font-bold tracking-widest text-brand-600 uppercase">Human Rights Education Learning Reflection</span>
+                                    <h3 class="text-2xl font-black text-slate-800 mt-1">人權教育課程自我省思卡</h3>
+                                </div>
+                                <span class="text-xs text-slate-400 font-medium" id="report-date">--</span>
+                            </div>
+                            <div class="mt-4 flex flex-wrap gap-4 text-xs font-medium text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <div><span class="text-slate-400">學生：</span><span id="summary-student-name" class="font-bold text-slate-800">--</span></div>
+                                <div><span class="text-slate-400">學校：</span><span id="summary-school" class="font-bold text-slate-800">--</span></div>
+                                <div><span class="text-slate-400">班級：</span><span id="summary-class" class="font-bold text-slate-800">--</span></div>
+                                <div><span class="text-slate-400">性別：</span><span id="summary-gender" class="font-bold text-slate-800">--</span></div>
+                                <div><span class="text-slate-400">榮譽徽章：</span><span id="summary-badge" class="font-bold text-brand-600">🌟 共情行動先鋒</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Section: Quantitative Growth & Chart -->
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8 items-center">
+                            <div class="md:col-span-6 bg-slate-50/80 p-4 rounded-2xl border border-slate-100 flex justify-center">
+                                <div class="w-full max-w-[320px] h-[260px] relative">
+                                    <canvas id="radarChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="md:col-span-6 space-y-3">
+                                <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-chart-line text-brand-600"></i> 人權意識轉化分析
+                                </h4>
+                                <div class="space-y-2 text-xs">
+                                    <div class="p-2.5 rounded-xl bg-teal-50 border border-teal-100 flex justify-between items-center">
+                                        <span class="text-slate-700">1. 尊嚴與平等的理解</span>
+                                        <span class="font-bold text-teal-800" id="summary-score-q1">3 ➔ 5</span>
+                                    </div>
+                                    <div class="p-2.5 rounded-xl bg-purple-50 border border-purple-100 flex justify-between items-center">
+                                        <span class="text-slate-700">2. 偏見與微歧視的察覺</span>
+                                        <span class="font-bold text-purple-800" id="summary-score-q2">3 ➔ 5</span>
+                                    </div>
+                                    <div class="p-2.5 rounded-xl bg-amber-50 border border-amber-100 flex justify-between items-center">
+                                        <span class="text-slate-700">3. 包容與同理心</span>
+                                        <span class="font-bold text-amber-800" id="summary-score-q3">3 ➔ 5</span>
+                                    </div>
+                                    <div class="p-2.5 rounded-xl bg-indigo-50 border border-indigo-100 flex justify-between items-center">
+                                        <span class="text-slate-700">4. 發聲與行動意願</span>
+                                        <span class="font-bold text-indigo-800" id="summary-score-q4">2 ➔ 4</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section: Narrative Summary -->
+                        <div class="space-y-6 text-sm">
+                            <!-- Box 1 -->
+                            <div class="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/60">
+                                <h5 class="font-bold text-amber-900 mb-2 flex items-center gap-2">
+                                    <i class="fa-solid fa-heart text-amber-600"></i> 學習感動｜課堂最觸動／印象最深的瞬間
+                                </h5>
+                                <p id="summary-text-touchpoint" class="text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">--</p>
+                            </div>
+
+                            <!-- Box 2 -->
+                            <div class="p-4 rounded-2xl bg-blue-50/50 border border-blue-200/60">
+                                <h5 class="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                                    <i class="fa-solid fa-eye text-blue-600"></i> 課堂覺察｜師生與同儕互動的觀察體會
+                                </h5>
+                                <p id="summary-text-interaction" class="text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">--</p>
+                            </div>
+
+                            <!-- Box 3 -->
+                            <div class="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200/60">
+                                <h5 class="font-bold text-emerald-900 mb-2 flex items-center gap-2">
+                                    <i class="fa-solid fa-seedling text-emerald-600"></i> 生活實踐｜課後行動與改變規劃
+                                </h5>
+                                <p id="summary-text-action" class="text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">--</p>
+                            </div>
+                        </div>
+
+                        <!-- Footer of certificate -->
+                        <div class="mt-8 pt-4 border-t border-slate-100 flex justify-between items-center text-xs text-slate-400">
+                            <span>人權教育自我省思紀錄卡</span>
+                            <span>認證代碼：<span id="cert-code">HR-2026-X88</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Navigation buttons -->
+                    <div class="no-print mt-8 flex justify-between gap-4">
+                        <button type="button" onclick="goToStep(3)" class="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-all">
+                            <i class="fa-solid fa-arrow-left"></i> 修改省思內容
+                        </button>
+                        <button type="button" id="btn-submit-main" onclick="submitForm(event)" class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-paper-plane"></i> 確定提交至教師管理後台
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+
+        <!-- =================================================================== -->
+        <!-- TEACHER SECTION (教師管理儀表板後台)                              -->
+        <!-- =================================================================== -->
+        <div id="teacher-view-container" class="space-y-6 hidden">
+            
+            <!-- Admin Top Stats Header -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card rounded-2xl p-5 border-l-4 border-brand-600">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase">總提交學習單</p>
+                            <h3 id="stat-total-submissions" class="text-2xl font-black text-slate-800 mt-1">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-file-signature"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-brand-600 font-medium mt-2"><i class="fa-solid fa-circle-check"></i> 班級填答率 100%</p>
+                </div>
+
+                <div class="glass-card rounded-2xl p-5 border-l-4 border-indigo-600">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase">平均覺察增幅</p>
+                            <h3 id="stat-avg-growth" class="text-2xl font-black text-indigo-600 mt-1">+0.0%</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-indigo-600 font-medium mt-2"><i class="fa-solid fa-chart-line"></i> 課後意識明顯提升</p>
+                </div>
+
+                <div class="glass-card rounded-2xl p-5 border-l-4 border-amber-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase">同理領航員人數</p>
+                            <h3 id="stat-top-badges" class="text-2xl font-black text-amber-600 mt-1">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-medal"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-amber-700 font-medium mt-2"><i class="fa-solid fa-star"></i> 達到高同理心指標</p>
+                </div>
+
+                <div class="glass-card rounded-2xl p-5 border-l-4 border-teal-600">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase">資料導出格式</p>
+                            <h3 class="text-lg font-bold text-slate-800 mt-1">CSV / Excel</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-file-csv"></i>
+                        </div>
+                    </div>
+                    <button onclick="exportSubmissionsCSV()" class="mt-2 text-xs text-brand-700 font-bold hover:underline flex items-center gap-1">
+                        <i class="fa-solid fa-download"></i> 點此下載總試算表
+                    </button>
+                </div>
+            </div>
+
+            <!-- Class Level Analytical Chart Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Class Overall Radar Comparison -->
+                <div class="lg:col-span-6 glass-card rounded-3xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-radar text-brand-600"></i> 全班四向度前後平均對比
+                        </h3>
+                        <span class="text-xs bg-brand-50 text-brand-700 px-2.5 py-1 rounded-md font-semibold">全全班綜合數據</span>
+                    </div>
+                    <div class="w-full h-[280px] relative flex justify-center">
+                        <canvas id="classRadarChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Dimension Highlights -->
+                <div class="lg:col-span-6 glass-card rounded-3xl p-6 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-bullseye text-indigo-600"></i> 教學成效重點觀察與數據分析
+                        </h3>
+                        <div class="space-y-3 text-xs">
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold text-slate-800 block text-sm">1. 尊嚴與平等理解</span>
+                                    <span class="text-slate-500">理解所有人皆有平等尊嚴</span>
+                                </div>
+                                <span id="class-avg-q1" class="font-black text-brand-700 text-sm">3.0 ➔ 4.7</span>
+                            </div>
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold text-slate-800 block text-sm">2. 偏見與微歧視察覺</span>
+                                    <span class="text-slate-500">察覺生活中無意間的微歧視</span>
+                                </div>
+                                <span id="class-avg-q2" class="font-black text-purple-700 text-sm">3.0 ➔ 4.5</span>
+                            </div>
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold text-slate-800 block text-sm">3. 包容與同理心</span>
+                                    <span class="text-slate-500">能易地而處傾聽多元聲音</span>
+                                </div>
+                                <span id="class-avg-q3" class="font-black text-amber-700 text-sm">3.0 ➔ 4.8</span>
+                            </div>
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold text-slate-800 block text-sm">4. 發聲與行動意願</span>
+                                    <span class="text-slate-500">願意在安全範圍給予關懷或協助</span>
+                                </div>
+                                <span id="class-avg-q4" class="font-black text-indigo-700 text-sm">2.3 ➔ 4.3</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
+                        <span>數據即時連動學生提交紀錄</span>
+                        <button onclick="preloadSampleData()" class="text-brand-600 hover:underline font-semibold">
+                            <i class="fa-solid fa-arrows-rotate"></i> 載入預設示範班級資料
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Submissions Data Table Section -->
+            <div class="glass-card rounded-3xl p-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-slate-200">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-users-viewfinder text-brand-600"></i> 學生省思學習單個別紀錄
+                        </h3>
+                        <p class="text-xs text-slate-500">點選學生即可查看詳細省思內容與進行 AI 教師評語給予</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                        <input type="text" id="search-student-input" onkeyup="filterSubmissions()" placeholder="搜尋姓名或學校..."
+                            class="px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 outline-none w-full sm:w-48">
+                        <button onclick="exportSubmissionsCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-excel"></i> 匯出全班 CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-100/80 text-slate-700 uppercase font-bold text-[11px] rounded-xl">
+                            <tr>
+                                <th class="p-3.5 rounded-l-xl">學生姓名</th>
+                                <th class="p-3.5">學校/班級</th>
+                                <th class="p-3.5">性別</th>
+                                <th class="p-3.5 text-center">前後覺察總分</th>
+                                <th class="p-3.5">獲得徽章</th>
+                                <th class="p-3.5">提交時間</th>
+                                <th class="p-3.5 text-right rounded-r-xl">操作檢視</th>
+                            </tr>
+                        </thead>
+                        <tbody id="student-table-body" class="divide-y divide-slate-100">
+                            <!-- Dynamic rendering -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- DETAILED STUDENT VIEW MODAL WITH AI FEEDBACK GENERATOR -->
+    <div id="student-detail-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto border border-slate-100">
+            <button onclick="closeStudentModal()" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-all">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div id="modal-content-area">
+                <!-- Dynamic Modal Content -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global State & Storage
+        let currentStep = 1;
+        const scores = {
+            q1: { before: 3, after: 5 },
+            q2: { before: 3, after: 5 },
+            q3: { before: 3, after: 5 },
+            q4: { before: 2, after: 4 }
+        };
+
+        let studentRadarChart = null;
+        let classRadarChart = null;
+        let detailModalRadarChart = null;
+
+        // Sample initial student submissions for demoing
+        let submissionsList = [
+            {
+                id: 'SUB-001',
+                studentName: '陳冠宇',
+                school: '實驗國民小學',
+                grade: '4',
+                classNum: '1班',
+                gender: '男',
+                date: '2026/10/14',
+                scores: { q1: {before: 3, after: 5}, q2: {before: 2, after: 4}, q3: {before: 3, after: 5}, q4: {before: 2, after: 4} },
+                touchpoint: '當影片中看到新住民同學因為口音被冷落時，我覺得很心疼。老師教我們「人權是每個人生來就有的權利」，這句話讓我印象非常深刻。',
+                interaction: '分組討論時，有同學表達看法比較慢，但大家都安靜耐心地等他講完，沒有打斷他，讓我覺得我們的教室很溫暖。',
+                action: '我決定以後在班上不要亂取綽號，並且當有新同學加入時，要主動帶他熟悉環境。',
+                badge: '🌟 人權同理領航員'
+            },
+            {
+                id: 'SUB-002',
+                studentName: '林雅婷',
+                school: '實驗國民小學',
+                grade: '4',
+                classNum: '1班',
+                gender: '女',
+                date: '2026/10/15',
+                scores: { q1: {before: 4, after: 5}, q2: {before: 3, after: 5}, q3: {before: 3, after: 5}, q4: {before: 3, after: 5} },
+                touchpoint: '老師介紹無障礙設施的時候，我才知道原來斜坡與點字不只是便利，更是身心障礙者的 basic human right (基本權利)。',
+                interaction: '大家討論得很熱烈，老師聽完每一位同學的發言都給予肯定的眼神，讓每個人都敢開口。',
+                action: '我會多關心周圍行動不便的人，並提醒大家不要佔用無障礙通道。',
+                badge: '🌟 人權同理領航員'
+            },
+            {
+                id: 'SUB-003',
+                studentName: '張哲瑋',
+                school: '實驗國民小學',
+                grade: '4',
+                classNum: '1班',
+                gender: '男',
+                date: '2026/10/15',
+                scores: { q1: {before: 2, after: 4}, q2: {before: 2, after: 4}, q3: {before: 2, after: 4}, q4: {before: 1, after: 3} },
+                touchpoint: '看了被霸凌者的心聲紀錄片，我才知道隨便笑別人可能會給對方帶來巨大的傷痛。',
+                interaction: '同學們會互相補充觀點，遇到不同意見時也沒有吵架。',
+                action: '看見不公平或欺負別人的行為時，我會試著告訴老師或陪在受害者旁邊支持他。',
+                badge: '💡 共情行動先鋒'
+            }
+        ];
+
+        window.onload = function() {
+            renderRatingButtons();
+            updateGrowthMetrics();
+            setCurrentDate();
+            loadStoredSubmissions();
+            updateTeacherDashboardUI();
+        };
+
+        function setCurrentDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            document.getElementById('report-date').innerText = `${year}/${month}/${day}`;
+        }
+
+        function switchViewMode(mode) {
+            const studentView = document.getElementById('student-view-container');
+            const teacherView = document.getElementById('teacher-view-container');
+            const btnStudent = document.getElementById('btn-mode-student');
+            const btnTeacher = document.getElementById('btn-mode-teacher');
+
+            if (mode === 'student') {
+                studentView.classList.remove('hidden');
+                teacherView.classList.add('hidden');
+                btnStudent.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all bg-white text-brand-700 shadow-sm flex items-center gap-2';
+                btnTeacher.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-2';
+            } else {
+                studentView.classList.add('hidden');
+                teacherView.classList.remove('hidden');
+                btnTeacher.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all bg-white text-indigo-700 shadow-sm flex items-center gap-2';
+                btnStudent.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-2';
+                
+                updateTeacherDashboardUI();
+                renderClassRadarChart();
+            }
+        }
+
+        function renderRatingButtons() {
+            const keys = ['q1', 'q2', 'q3', 'q4'];
+            keys.forEach(key => {
+                const beforeContainer = document.getElementById(`${key}_before_group`);
+                const afterContainer = document.getElementById(`${key}_after_group`);
+
+                if (beforeContainer) beforeContainer.innerHTML = generateScoreButtonsHTML(key, 'before', scores[key].before);
+                if (afterContainer) afterContainer.innerHTML = generateScoreButtonsHTML(key, 'after', scores[key].after);
+            });
+        }
+
+        function generateScoreButtonsHTML(qKey, type, selectedVal) {
+            let html = '';
+            for (let i = 1; i <= 5; i++) {
+                const isActive = i === selectedVal;
+                const activeClass = isActive 
+                    ? (type === 'before' ? 'bg-slate-700 text-white font-bold shadow-md' : 'bg-brand-600 text-white font-bold shadow-md') 
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100';
+                
+                html += `
+                    <button type="button" onclick="setRating('${qKey}', '${type}', ${i})" 
+                        class="flex-1 py-2 rounded-lg text-xs smooth-transition ${activeClass}">
+                        ${i}
+                    </button>
+                `;
+            }
+            return html;
+        }
+
+        function setRating(qKey, type, val) {
+            scores[qKey][type] = val;
+            document.getElementById(`${qKey}_${type}_val`).innerText = `${val}分`;
+            renderRatingButtons();
+            updateGrowthMetrics();
+        }
+
+        function updateGrowthMetrics() {
+            let beforeSum = 0;
+            let afterSum = 0;
+
+            Object.keys(scores).forEach(k => {
+                beforeSum += scores[k].before;
+                afterSum += scores[k].after;
+            });
+
+            const diff = afterSum - beforeSum;
+            const percent = beforeSum > 0 ? ((diff / beforeSum) * 100).toFixed(1) : '0.0';
+            
+            const badgeEl = document.getElementById('growth-percent');
+            if (badgeEl) {
+                if (diff >= 0) {
+                    badgeEl.innerText = `+${diff} 分 (+${percent}%)`;
+                    badgeEl.className = 'text-lg font-black text-brand-600';
+                } else {
+                    badgeEl.innerText = `${diff} 分 (${percent}%)`;
+                    badgeEl.className = 'text-lg font-black text-rose-500';
+                }
+            }
+        }
+
+        function updateGenderStyle(radioEl) {
+            const labels = document.querySelectorAll('.gender-option');
+            labels.forEach(l => {
+                l.classList.remove('border-brand-500', 'bg-brand-50', 'text-brand-700');
+                l.classList.add('border-slate-300', 'text-slate-700');
+            });
+            if(radioEl.checked) {
+                radioEl.parentElement.classList.add('border-brand-500', 'bg-brand-50', 'text-brand-700');
+            }
+        }
+
+        function insertPrompt(textareaId, promptText) {
+            const textarea = document.getElementById(textareaId);
+            if (!textarea) return;
+            if (textarea.value.trim() === '') {
+                textarea.value = promptText;
+            } else {
+                textarea.value += ' ' + promptText;
+            }
+            textarea.focus();
+            showToast('已加入引導靈感！');
+        }
+
+        function goToStep(stepNum) {
+            for (let i = 1; i <= 4; i++) {
+                const stepEl = document.getElementById(`step-${i}`);
+                if (stepEl) stepEl.classList.add('hidden');
+                
+                const dot = document.getElementById(`step-dot-${i}`);
+                if (dot) {
+                    if (i < stepNum) {
+                        dot.className = 'relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-brand-700 text-white shadow-sm smooth-transition';
+                        dot.innerHTML = '<i class="fa-solid fa-check"></i>';
+                    } else if (i === stepNum) {
+                        dot.className = 'relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-brand-600 text-white shadow-md ring-4 ring-brand-100 smooth-transition';
+                        dot.innerText = i;
+                    } else {
+                        dot.className = 'relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-slate-200 text-slate-600 smooth-transition';
+                        dot.innerText = i;
+                    }
+                }
+            }
+
+            const progressFill = document.getElementById('progress-bar-fill');
+            const fillPercents = [0, 0, 33, 66, 100];
+            if (progressFill) progressFill.style.width = fillPercents[stepNum] + '%';
+
+            const activeStep = document.getElementById(`step-${stepNum}`);
+            if (activeStep) activeStep.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function nextStep(currentStep) {
+            if (currentStep === 1) {
+                const name = document.getElementById('studentName').value.trim();
+                const school = document.getElementById('schoolName').value.trim();
+                const grade = document.getElementById('grade').value.trim();
+                const classNum = document.getElementById('classNum').value.trim();
+
+                if (!name || !school || !grade || !classNum) {
+                    showToast('請完整填寫學生姓名、學校、年級與班級資訊', 'warning');
+                    return;
+                }
+            }
+            goToStep(currentStep + 1);
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast-message');
+            const toastText = document.getElementById('toast-text');
+            const toastIcon = document.getElementById('toast-icon');
+            
+            if (toastText) toastText.innerText = msg;
+            if (toastIcon) {
+                if (type === 'warning') {
+                    toastIcon.className = 'fa-solid fa-triangle-exclamation text-amber-400 text-lg';
+                } else {
+                    toastIcon.className = 'fa-solid fa-circle-check text-brand-500 text-lg';
+                }
+            }
+            if (toast) {
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 3000);
+            }
+        }
+
+        function generateReport() {
+            const touchpoint = document.getElementById('text_touchpoint').value.trim();
+            const interaction = document.getElementById('text_interaction').value.trim();
+            const action = document.getElementById('text_action').value.trim();
+
+            if (!touchpoint || !interaction || !action) {
+                showToast('請回答第三部分的三項文字省思題目', 'warning');
+                return;
+            }
+
+            document.getElementById('summary-student-name').innerText = document.getElementById('studentName').value || '未填寫';
+            document.getElementById('summary-school').innerText = document.getElementById('schoolName').value || '未填寫';
+            document.getElementById('summary-class').innerText = `${document.getElementById('grade').value} 年 ${document.getElementById('classNum').value}`;
+            
+            const selectedGender = document.querySelector('input[name="gender"]:checked');
+            document.getElementById('summary-gender').innerText = selectedGender ? selectedGender.value : '不便透露';
+
+            document.getElementById('summary-score-q1').innerText = `${scores.q1.before} 分 ➔ ${scores.q1.after} 分`;
+            document.getElementById('summary-score-q2').innerText = `${scores.q2.before} 分 ➔ ${scores.q2.after} 分`;
+            document.getElementById('summary-score-q3').innerText = `${scores.q3.before} 分 ➔ ${scores.q3.after} 分`;
+            document.getElementById('summary-score-q4').innerText = `${scores.q4.before} 分 ➔ ${scores.q4.after} 分`;
+
+            document.getElementById('summary-text-touchpoint').innerText = touchpoint;
+            document.getElementById('summary-text-interaction').innerText = interaction;
+            document.getElementById('summary-text-action').innerText = action;
+
+            let afterTotal = scores.q1.after + scores.q2.after + scores.q3.after + scores.q4.after;
+            let badgeText = "🌱 潛力人權學習者";
+            if (afterTotal >= 18) badgeText = "🌟 人權同理領航員";
+            else if (afterTotal >= 14) badgeText = "💡 共情行動先鋒";
+            document.getElementById('summary-badge').innerText = badgeText;
+
+            renderStudentRadarChart();
+            goToStep(4);
+            showToast('省思報告成功生成！');
+        }
+
+        function renderStudentRadarChart() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if (studentRadarChart) studentRadarChart.destroy();
+
+            studentRadarChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['尊嚴與平等', '偏見察覺', '包容同理心', '發聲行動力'],
+                    datasets: [
+                        {
+                            label: '上課前覺察',
+                            data: [scores.q1.before, scores.q2.before, scores.q3.before, scores.q4.before],
+                            backgroundColor: 'rgba(100, 116, 139, 0.2)',
+                            borderColor: 'rgba(100, 116, 139, 0.8)',
+                            pointBackgroundColor: 'rgba(100, 116, 139, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: '上課後覺察',
+                            data: [scores.q1.after, scores.q2.after, scores.q3.after, scores.q4.after],
+                            backgroundColor: 'rgba(13, 148, 136, 0.35)',
+                            borderColor: 'rgba(13, 148, 136, 1)',
+                            pointBackgroundColor: 'rgba(13, 148, 136, 1)',
+                            borderWidth: 2.5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 5,
+                            ticks: { stepSize: 1, display: false },
+                            pointLabels: {
+                                font: { size: 11, family: "'Noto Sans TC', sans-serif", weight: 'bold' },
+                                color: '#334155'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function downloadCertificateAsImage() {
+            const element = document.getElementById('printable-certificate');
+            showToast('正在導出高品質圖卡，請稍候...');
+
+            html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `人權教育省思卡_${document.getElementById('studentName').value || '學生'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showToast('圖卡已成功下載！');
+            }).catch(err => {
+                showToast('圖卡生成失敗，請使用列印按鈕儲存 PDF');
+            });
+        }
+
+        function copyReportText() {
+            const studentName = document.getElementById('summary-student-name').innerText;
+            const school = document.getElementById('summary-school').innerText;
+            const className = document.getElementById('summary-class').innerText;
+            const touchpoint = document.getElementById('summary-text-touchpoint').innerText;
+            const interaction = document.getElementById('summary-text-interaction').innerText;
+            const action = document.getElementById('summary-text-action').innerText;
+
+            const fullText = `【人權教育課程自我省思】
+學生：${studentName}
+學校：${school}
+班級：${className}
+
+一、人權意識自我覺察分數（課前 ➔ 課後）
+1. 尊嚴與平等的理解：${document.getElementById('summary-score-q1').innerText}
+2. 偏見與微歧視的察覺：${document.getElementById('summary-score-q2').innerText}
+3. 包容與同理心：${document.getElementById('summary-score-q3').innerText}
+4. 發聲與行動意願：${document.getElementById('summary-score-q4').innerText}
+
+二、課堂感動、覺察與共情敘述
+1. 課堂最觸動／印象最深的瞬間（學習感動）：
+${touchpoint}
+
+2. 師生與同儕互動的觀察與體會（課堂覺察）：
+${interaction}
+
+3. 課後行動與改變（生活實踐）：
+${action}`;
+
+            const dummy = document.createElement('textarea');
+            document.body.appendChild(dummy);
+            dummy.value = fullText;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+
+            showToast('已成功複製完整省思內容至剪貼簿！');
+        }
+
+        function submitForm(evt) {
+            const submitBtn = document.getElementById('btn-submit-main');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 資料傳送中...';
+            }
+
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+
+            const newRecord = {
+                id: 'SUB-' + Date.now().toString().slice(-4),
+                studentName: document.getElementById('studentName').value.trim() || '無名同學',
+                school: document.getElementById('schoolName').value.trim(),
+                grade: document.getElementById('grade').value.trim(),
+                classNum: document.getElementById('classNum').value.trim(),
+                gender: (document.querySelector('input[name="gender"]:checked') || {}).value || '未填寫',
+                date: dateStr,
+                scores: JSON.parse(JSON.stringify(scores)),
+                touchpoint: document.getElementById('text_touchpoint').value.trim(),
+                interaction: document.getElementById('text_interaction').value.trim(),
+                action: document.getElementById('text_action').value.trim(),
+                badge: document.getElementById('summary-badge').innerText
+            };
+
+            submissionsList.unshift(newRecord);
+            saveSubmissionsToStorage();
+            updateTeacherDashboardUI();
+
+            setTimeout(() => {
+                showToast('🎉 省思報告已成功提交至教師管理後台！');
+                if (submitBtn) {
+                    submitBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                    submitBtn.classList.add('bg-slate-400', 'cursor-not-allowed');
+                    submitBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> 已成功提交';
+                }
+            }, 600);
+        }
+
+        function saveSubmissionsToStorage() {
+            try {
+                localStorage.setItem('hr_reflections_data', JSON.stringify(submissionsList));
+            } catch(e) {}
+        }
+
+        function loadStoredSubmissions() {
+            try {
+                const data = localStorage.getItem('hr_reflections_data');
+                if (data) {
+                    submissionsList = JSON.parse(data);
+                }
+            } catch(e) {}
+        }
+
+        function updateTeacherDashboardUI() {
+            // Update counter badges
+            document.getElementById('submission-count-badge').innerText = submissionsList.length;
+            document.getElementById('stat-total-submissions').innerText = submissionsList.length;
+
+            if (submissionsList.length === 0) {
+                document.getElementById('stat-avg-growth').innerText = '+0.0%';
+                document.getElementById('stat-top-badges').innerText = '0';
+                renderStudentTable([]);
+                return;
+            }
+
+            // Calculate metrics
+            let totalBefore = 0;
+            let totalAfter = 0;
+            let topBadgesCount = 0;
+
+            let sums = {
+                q1: { b: 0, a: 0 },
+                q2: { b: 0, a: 0 },
+                q3: { b: 0, a: 0 },
+                q4: { b: 0, a: 0 }
+            };
+
+            submissionsList.forEach(item => {
+                if (item.badge.includes('同理領航員')) topBadgesCount++;
+                
+                Object.keys(sums).forEach(k => {
+                    if (item.scores && item.scores[k]) {
+                        sums[k].b += item.scores[k].before;
+                        sums[k].a += item.scores[k].after;
+                        totalBefore += item.scores[k].before;
+                        totalAfter += item.scores[k].after;
+                    }
+                });
+            });
+
+            const count = submissionsList.length;
+            const growth = totalBefore > 0 ? (((totalAfter - totalBefore) / totalBefore) * 100).toFixed(1) : '0.0';
+            
+            document.getElementById('stat-avg-growth').innerText = `+${growth}%`;
+            document.getElementById('stat-top-badges').innerText = topBadgesCount;
+
+            document.getElementById('class-avg-q1').innerText = `${(sums.q1.b / count).toFixed(1)} ➔ ${(sums.q1.a / count).toFixed(1)}`;
+            document.getElementById('class-avg-q2').innerText = `${(sums.q2.b / count).toFixed(1)} ➔ ${(sums.q2.a / count).toFixed(1)}`;
+            document.getElementById('class-avg-q3').innerText = `${(sums.q3.b / count).toFixed(1)} ➔ ${(sums.q3.a / count).toFixed(1)}`;
+            document.getElementById('class-avg-q4').innerText = `${(sums.q4.b / count).toFixed(1)} ➔ ${(sums.q4.a / count).toFixed(1)}`;
+
+            renderStudentTable(submissionsList);
+        }
+
+        function renderClassRadarChart() {
+            const ctx = document.getElementById('classRadarChart').getContext('2d');
+            if (classRadarChart) classRadarChart.destroy();
+
+            const count = submissionsList.length || 1;
+            let sums = {
+                q1: { b: 0, a: 0 },
+                q2: { b: 0, a: 0 },
+                q3: { b: 0, a: 0 },
+                q4: { b: 0, a: 0 }
+            };
+
+            submissionsList.forEach(item => {
+                Object.keys(sums).forEach(k => {
+                    if (item.scores && item.scores[k]) {
+                        sums[k].b += item.scores[k].before;
+                        sums[k].a += item.scores[k].after;
+                    }
+                });
+            });
+
+            const beforeMeans = [sums.q1.b / count, sums.q2.b / count, sums.q3.b / count, sums.q4.b / count];
+            const afterMeans = [sums.q1.a / count, sums.q2.a / count, sums.q3.a / count, sums.q4.a / count];
+
+            classRadarChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['尊嚴與平等', '偏見察覺', '包容同理心', '發聲行動力'],
+                    datasets: [
+                        {
+                            label: '全班課前平均',
+                            data: beforeMeans,
+                            backgroundColor: 'rgba(148, 163, 184, 0.25)',
+                            borderColor: 'rgba(100, 116, 139, 1)',
+                            pointBackgroundColor: 'rgba(100, 116, 139, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: '全班課後平均',
+                            data: afterMeans,
+                            backgroundColor: 'rgba(79, 70, 229, 0.35)',
+                            borderColor: 'rgba(79, 70, 229, 1)',
+                            pointBackgroundColor: 'rgba(79, 70, 229, 1)',
+                            borderWidth: 2.5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 5,
+                            ticks: { stepSize: 1, display: false },
+                            pointLabels: {
+                                font: { size: 11, family: "'Noto Sans TC', sans-serif", weight: 'bold' },
+                                color: '#1e293b'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function renderStudentTable(list) {
+            const tbody = document.getElementById('student-table-body');
+            tbody.innerHTML = '';
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">目前尚無提交紀錄</td></tr>`;
+                return;
+            }
+
+            list.forEach(item => {
+                const totalB = item.scores.q1.before + item.scores.q2.before + item.scores.q3.before + item.scores.q4.before;
+                const totalA = item.scores.q1.after + item.scores.q2.after + item.scores.q3.after + item.scores.q4.after;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition-all cursor-pointer';
+                tr.onclick = () => openStudentModal(item.id);
+
+                tr.innerHTML = `
+                    <td class="p-3.5 font-bold text-slate-800 flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-brand-100 text-brand-800 flex items-center justify-center font-bold text-xs">
+                            ${item.studentName.slice(0, 1)}
+                        </div>
+                        ${item.studentName}
+                    </td>
+                    <td class="p-3.5 text-slate-600">${item.school} <span class="text-slate-400">/ ${item.grade}年${item.classNum}</span></td>
+                    <td class="p-3.5 text-slate-500">${item.gender}</td>
+                    <td class="p-3.5 text-center font-bold">
+                        <span class="text-slate-400">${totalB}</span> ➔ <span class="text-brand-700">${totalA}</span>
+                    </td>
+                    <td class="p-3.5">
+                        <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/60">
+                            ${item.badge}
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-slate-400">${item.date}</td>
+                    <td class="p-3.5 text-right">
+                        <button onclick="event.stopPropagation(); openStudentModal('${item.id}')" 
+                            class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg text-xs transition-all">
+                            <i class="fa-solid fa-eye mr-1"></i> 查看省思
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterSubmissions() {
+            const query = document.getElementById('search-student-input').value.toLowerCase();
+            const filtered = submissionsList.filter(s => 
+                s.studentName.toLowerCase().includes(query) || 
+                s.school.toLowerCase().includes(query)
+            );
+            renderStudentTable(filtered);
+        }
+
+        function preloadSampleData() {
+            submissionsList = [
+                {
+                    id: 'SUB-001',
+                    studentName: '陳冠宇',
+                    school: '實驗國民小學',
+                    grade: '4',
+                    classNum: '1班',
+                    gender: '男',
+                    date: '2026/10/14',
+                    scores: { q1: {before: 3, after: 5}, q2: {before: 2, after: 4}, q3: {before: 3, after: 5}, q4: {before: 2, after: 4} },
+                    touchpoint: '當影片中看到新住民同學因為口音被冷落時，我覺得很心疼。老師教我們「人權是每個人生來就有的權利」，這句話讓我印象非常深刻。',
+                    interaction: '分組討論時，有同學表達看法比較慢，但大家都安靜耐心地等他講完，沒有打斷他，讓我覺得我們的教室很溫暖。',
+                    action: '我決定以後在班上不要亂取綽號，並且當有新同學加入時，要主動帶他熟悉環境。',
+                    badge: '🌟 人權同理領航員'
+                },
+                {
+                    id: 'SUB-002',
+                    studentName: '林雅婷',
+                    school: '實驗國民小學',
+                    grade: '4',
+                    classNum: '1班',
+                    gender: '女',
+                    date: '2026/10/15',
+                    scores: { q1: {before: 4, after: 5}, q2: {before: 3, after: 5}, q3: {before: 3, after: 5}, q4: {before: 3, after: 5} },
+                    touchpoint: '老師介紹無障礙設施的時候，我才知道原來斜坡與點字不只是便利，更是身心障礙者的 basic human right (基本權利)。',
+                    interaction: '大家討論得很熱烈，老師聽完每一位同學的發言都給予肯定的眼神，讓每個人都敢開口。',
+                    action: '我會多關心周圍行動不便的人，並提醒大家不要佔用無障礙通道。',
+                    badge: '🌟 人權同理領航員'
+                },
+                {
+                    id: 'SUB-003',
+                    studentName: '張哲瑋',
+                    school: '實驗國民小學',
+                    grade: '4',
+                    classNum: '1班',
+                    gender: '男',
+                    date: '2026/10/15',
+                    scores: { q1: {before: 2, after: 4}, q2: {before: 2, after: 4}, q3: {before: 2, after: 4}, q4: {before: 1, after: 3} },
+                    touchpoint: '看了被霸凌者的心聲紀錄片，我才知道隨便笑別人可能會給對方帶來巨大的傷痛。',
+                    interaction: '同學們會互相補充觀點，遇到不同意見時也沒有吵架。',
+                    action: '看見不公平或欺負別人的行為時，我會試著告訴老師或陪在受害者旁邊支持他。',
+                    badge: '💡 共情行動先鋒'
+                }
+            ];
+            saveSubmissionsToStorage();
+            updateTeacherDashboardUI();
+            renderClassRadarChart();
+            showToast('已重設為示範班級資料！');
+        }
+
+        function exportSubmissionsCSV() {
+            if (submissionsList.length === 0) {
+                showToast('目前尚無資料可導出', 'warning');
+                return;
+            }
+
+            let csvContent = "\uFEFF"; // UTF-8 BOM
+            csvContent += "學生姓名,學校名稱,年級,班級,性別,提交日期,尊嚴與平等(前),尊嚴與平等(後),偏見察覺(前),偏見察覺(後),同理包容(前),同理包容(後),行動力(前),行動力(後),學習感動,課堂覺察,生活實踐,獲得徽章\n";
+
+            submissionsList.forEach(s => {
+                const escapeCsv = (str) => `"${(str || '').replace(/"/g, '""')}"`;
+                csvContent += [
+                    escapeCsv(s.studentName),
+                    escapeCsv(s.school),
+                    escapeCsv(s.grade),
+                    escapeCsv(s.classNum),
+                    escapeCsv(s.gender),
+                    escapeCsv(s.date),
+                    s.scores.q1.before, s.scores.q1.after,
+                    s.scores.q2.before, s.scores.q2.after,
+                    s.scores.q3.before, s.scores.q3.after,
+                    s.scores.q4.before, s.scores.q4.after,
+                    escapeCsv(s.touchpoint),
+                    escapeCsv(s.interaction),
+                    escapeCsv(s.action),
+                    escapeCsv(s.badge)
+                ].join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `人權教育學習單全班總表_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            showToast('已成功匯出 CSV 試算表！');
+        }
+
+        function openStudentModal(subId) {
+            const item = submissionsList.find(s => s.id === subId);
+            if (!item) return;
+
+            const modalContent = document.getElementById('modal-content-area');
+            
+            modalContent.innerHTML = `
+                <div class="flex justify-between items-start border-b border-slate-200 pb-4 mb-5 pr-8">
+                    <div>
+                        <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded text-xs font-bold">${item.badge}</span>
+                        <h3 class="text-xl font-black text-slate-800 mt-1">${item.studentName} 的省思學習單</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">${item.school} ｜ ${item.grade}年${item.classNum} ｜ 提交日期：${item.date}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
+                    <div class="md:col-span-5 bg-slate-50 p-3 rounded-2xl flex justify-center">
+                        <div class="w-full max-w-[240px] h-[200px] relative">
+                            <canvas id="detailRadarChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="md:col-span-7 space-y-2 text-xs">
+                        <div class="p-2 bg-slate-50 rounded-xl border flex justify-between">
+                            <span>1. 尊嚴與平等</span><span class="font-bold text-teal-800">${item.scores.q1.before} ➔ ${item.scores.q1.after}</span>
+                        </div>
+                        <div class="p-2 bg-slate-50 rounded-xl border flex justify-between">
+                            <span>2. 偏見察覺</span><span class="font-bold text-purple-800">${item.scores.q2.before} ➔ ${item.scores.q2.after}</span>
+                        </div>
+                        <div class="p-2 bg-slate-50 rounded-xl border flex justify-between">
+                            <span>3. 包容同理心</span><span class="font-bold text-amber-800">${item.scores.q3.before} ➔ ${item.scores.q3.after}</span>
+                        </div>
+                        <div class="p-2 bg-slate-50 rounded-xl border flex justify-between">
+                            <span>4. 發聲行動力</span><span class="font-bold text-indigo-800">${item.scores.q4.before} ➔ ${item.scores.q4.after}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4 text-xs">
+                    <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200/70">
+                        <h5 class="font-bold text-amber-900 mb-1">🎬 課堂最觸動瞬間：</h5>
+                        <p class="text-slate-700 leading-relaxed">${item.touchpoint}</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-blue-50/70 border border-blue-200/70">
+                        <h5 class="font-bold text-blue-900 mb-1">👀 課堂互動觀察：</h5>
+                        <p class="text-slate-700 leading-relaxed">${item.interaction}</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/70">
+                        <h5 class="font-bold text-emerald-900 mb-1">🌱 課後行動規劃：</h5>
+                        <p class="text-slate-700 leading-relaxed">${item.action}</p>
+                    </div>
+                </div>
+
+                <!-- AI Teacher Feedback Assistant Section -->
+                <div class="mt-6 p-4 rounded-2xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-indigo-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-bold text-indigo-900 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i> AI 教師溫馨評語生成助手 (Gemini 3 Flash)
+                        </h4>
+                        <button onclick="generateAIFeedback('${item.studentName}', '${item.touchpoint}', '${item.action}')" 
+                            class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition-all">
+                            <i class="fa-solid fa-sparkles"></i> 一鍵生成個人化評語
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mb-3">根據學生的感動與生活實踐內容，AI 智慧擬定符合素養導向的溫暖鼓勵評語。</p>
+                    
+                    <div id="ai-feedback-box" class="p-3 bg-white rounded-xl border border-indigo-100 text-xs text-slate-700 leading-relaxed min-h-[60px] flex items-center justify-center italic text-slate-400">
+                        點擊上方按鈕，即刻生成給 ${item.studentName} 同學的溫馨評語...
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('student-detail-modal').classList.remove('hidden');
+
+            // Render Radar in modal
+            setTimeout(() => {
+                const ctx = document.getElementById('detailRadarChart').getContext('2d');
+                if (detailModalRadarChart) detailModalRadarChart.destroy();
+
+                detailModalRadarChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['尊嚴平等', '偏見察覺', '包容同理', '行動力'],
+                        datasets: [
+                            {
+                                label: '課前',
+                                data: [item.scores.q1.before, item.scores.q2.before, item.scores.q3.before, item.scores.q4.before],
+                                backgroundColor: 'rgba(148, 163, 184, 0.2)',
+                                borderColor: 'rgba(148, 163, 184, 0.8)',
+                                borderWidth: 1.5
+                            },
+                            {
+                                label: '課後',
+                                data: [item.scores.q1.after, item.scores.q2.after, item.scores.q3.after, item.scores.q4.after],
+                                backgroundColor: 'rgba(13, 148, 136, 0.35)',
+                                borderColor: 'rgba(13, 148, 136, 1)',
+                                borderWidth: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { r: { min: 0, max: 5, ticks: { display: false } } },
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+                    }
+                });
+            }, 100);
+        }
+
+        function closeStudentModal() {
+            document.getElementById('student-detail-modal').classList.add('hidden');
+        }
+
+        async function generateAIFeedback(studentName, touchpoint, action) {
+            const feedbackBox = document.getElementById('ai-feedback-box');
+            feedbackBox.className = "p-3 bg-white rounded-xl border border-indigo-100 text-xs text-indigo-600 font-medium leading-relaxed min-h-[60px] flex items-center justify-center";
+            feedbackBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> AI 正在分析 ${studentName} 同學的省思並撰寫評語中...`;
+
+            const apiKey = ""; // Canvas runtime automatically supplies API Key
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `你是一位充滿溫暖與同理心的人權教育教師。請根據國小學生的學習單省思內容，寫一段大約 80-120 字的簡短、真誠且具鼓勵性的教師評語。讚許同學在課堂上的觀察與能在生活中付諸行動的決心。`;
+
+            const userQuery = `學生姓名：${studentName}
+課堂感動瞬間：${touchpoint}
+課後生活實踐：${action}
+
+請給予這位同學簡短有溫度的評語：`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const aiText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (aiText) {
+                    feedbackBox.className = "p-3 bg-white rounded-xl border border-indigo-200 text-xs text-slate-800 leading-relaxed font-normal shadow-sm";
+                    feedbackBox.innerText = aiText;
+                } else {
+                    feedbackBox.innerText = `💬 ${studentName} 同學表現非常棒！能從課堂故事中深刻理解平等的尊嚴，並立志在日常生活中減少微歧視與主動關懷他人，展現了卓越的同理素養！`;
+                }
+            } catch (err) {
+                feedbackBox.className = "p-3 bg-white rounded-xl border border-indigo-200 text-xs text-slate-800 leading-relaxed font-normal shadow-sm";
+                feedbackBox.innerText = `💬 ${studentName} 同學表現非常棒！能從課堂故事中深刻理解平等的尊嚴，並立志在日常生活中減少微歧視與主動關懷他人，展現了卓越的同理素養！`;
+            }
+        }
+    </script>
+</body>
+</html>
